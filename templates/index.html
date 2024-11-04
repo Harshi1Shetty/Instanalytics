@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Influencer Analytics Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        /* Styles for the dashboard */
+        :root {
+            --primary-color: #405DE6;
+            --secondary-color: #5B51D8;
+            --background-color: #f5f5f5;
+            --card-background: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            display: inline-block;
+            padding: 1rem;
+            background: var(--card-background);
+            border: 2px solid var(--primary-color);
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 1rem;
+        }
+
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .input-section, .results-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: var(--card-background);
+            border-radius: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            color: white;
+            background-color: var(--primary-color);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .metric-card {
+            margin-top: 1rem;
+            padding: 1.5rem;
+            background-color: var(--card-background);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Influencer Analytics Dashboard</h1>
+            <p>Analyze Instagram profiles and estimate revenue potential</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab active" onclick="switchTab('single')">Single Profile</div>
+        <div class="tab" onclick="switchTab('compare')">Compare Profiles</div>
+
+        <!-- Single Profile Analysis Section -->
+        <div id="single-analysis" class="input-section">
+            <div class="form-group">
+                <label for="username">Instagram Username</label>
+                <input type="text" id="username" placeholder="Enter username without @">
+            </div>
+            <div class="form-group">
+                <label for="conversion-rate">Expected Conversion Rate (%)</label>
+                <select id="conversion-rate">
+                    <option value="1.0">1.0%</option>
+                    <option value="2.0">2.0%</option>
+                    <option value="5.0">5.0%</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="order-value">Average Order Value ($)</label>
+                <input type="number" id="order-value" value="50">
+            </div>
+            <button onclick="analyzeProfile()">Analyze Profile</button>
+        </div>
+
+        <!-- Comparison Section -->
+        <div id="compare-analysis" class="input-section" style="display:none;">
+            <div class="form-group">
+                <label for="usernames">Instagram Usernames (comma-separated)</label>
+                <input type="text" id="usernames" placeholder="Enter usernames separated by commas">
+            </div>
+            <div class="form-group">
+                <label for="compare-conversion-rate">Expected Conversion Rate (%)</label>
+                <select id="compare-conversion-rate">
+                    <option value="1.0">1.0%</option>
+                    <option value="2.0">2.0%</option>
+                    <option value="5.0">5.0%</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="compare-order-value">Average Order Value ($)</label>
+                <input type="number" id="compare-order-value" value="50">
+            </div>
+            <button onclick="compareProfiles()">Compare Profiles</button>
+        </div>
+
+        <!-- Results Section for Single Profile Analysis -->
+        <div id="single-results" class="results-section">
+            <div class="metric-card">
+                <h3>Followers</h3>
+                <div id="followers">-</div>
+            </div>
+            <div class="metric-card">
+                <h3>Engagement Rate</h3>
+                <div id="engagement-rate">-</div>
+            </div>
+            <div class="metric-card">
+                <h3>Estimated Revenue</h3>
+                <div id="estimated-revenue">-</div>
+            </div>
+        </div>
+
+        <!-- Results Section for Comparison -->
+        <div id="comparison-results" class="results-section" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Followers</th>
+                        <th>Engagement Rate</th>
+                        <th>Max Revenue</th>
+                    </tr>
+                </thead>
+                <tbody id="comparison-tbody">
+                    <!-- Comparison results will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Function to switch between single and compare views
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('single-analysis').style.display = tab === 'single' ? 'block' : 'none';
+            document.getElementById('compare-analysis').style.display = tab === 'compare' ? 'block' : 'none';
+            document.getElementById('single-results').style.display = tab === 'single' ? 'block' : 'none';
+            document.getElementById('comparison-results').style.display = tab === 'compare' ? 'block' : 'none';
+        }
+
+        async function analyzeProfile() {
+            const username = document.getElementById('username').value;
+            const conversionRate = parseFloat(document.getElementById('conversion-rate').value);
+            const orderValue = parseFloat(document.getElementById('order-value').value);
+
+            const response = await fetch('http://localhost:5000/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, conversion_rate: conversionRate, avg_order_value: orderValue })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('followers').innerText = data.profile_metrics.follower_count;
+                document.getElementById('engagement-rate').innerText = data.profile_metrics.engagement_rate.toFixed(2) + '%';
+                document.getElementById('estimated-revenue').innerText = `$${data.revenue_analysis.min_revenue.toFixed(2)} - $${data.revenue_analysis.max_revenue.toFixed(2)}`;
+            } else {
+                alert(data.error || 'Failed to analyze profile');
+            }
+        }
+
+        async function compareProfiles() {
+            const usernames = document.getElementById('usernames').value.split(',').map(u => u.trim());
+            const conversionRate = parseFloat(document.getElementById('compare-conversion-rate').value);
+            const orderValue = parseFloat(document.getElementById('compare-order-value').value);
+
+            const response = await fetch('http://localhost:5000/compare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ usernames, conversion_rate: conversionRate, avg_order_value: orderValue })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                const tbody = document.getElementById('comparison-tbody');
+                tbody.innerHTML = ''; // Clear previous data
+
+                data.profiles.forEach(profile => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${profile.username}</td>
+                        <td>${profile.metrics.follower_count}</td>
+                        <td>${profile.metrics.engagement_rate.toFixed(2)}%</td>
+                        <td>$${profile.revenue_analysis.max_revenue.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                alert(data.error || 'Failed to compare profiles');
+            }
+        }
+    </script>
+</body>
+</html>
